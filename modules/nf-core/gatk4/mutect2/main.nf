@@ -8,7 +8,9 @@ process GATK4_MUTECT2 {
         'quay.io/biocontainers/gatk4:4.3.0.0--py36hdfd78af_0' }"
 
     input:
-    tuple val(meta), path(input), path(input_index), path(intervals)
+    tuple val(meta), path(input)
+    path(input_index)
+    path(intervals)
     path fasta
     path fai
     path dict
