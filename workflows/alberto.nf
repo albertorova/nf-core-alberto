@@ -17,7 +17,8 @@ def checkPathParamList = [ params.input,
                            params.fasta,
                            params.intervals,
                            params.known_indels,
-                           params.snpeff_cache
+                           params.snpeff_cache,
+                           params.vep_cache
                             ]
 
 
@@ -55,8 +56,10 @@ intervals          = params.intervals              ? Channel.fromPath(params.int
 known_indels       = params.known_indels           ? Channel.fromPath(params.known_indels).collect()                 : Channel.empty()
 
 snpeff_db          = params.snpeff_db          ?: Channel.empty()
+vep_cache_version  = params.vep_cache_version  ?: Channel.empty()
 
 snpeff_cache       = params.snpeff_cache       ? Channel.fromPath(params.snpeff_cache).collect()             : []
+vep_cache          = params.vep_cache          ? Channel.fromPath(params.vep_cache).collect()                : []
 
 
 /*
@@ -103,12 +106,14 @@ include { GATK4_ESTIMATELIBRARYCOMPLEXITY        } from '../modules/nf-core/gatk
 
 include { FREEBAYES                              } from '../modules/nf-core/freebayes/main'
 include { STRELKA_GERMLINE                       } from '../modules/nf-core/strelka/germline/main'
+include { GATK4_MUTECT2                          } from '../modules/nf-core/gatk4/mutect2/main'
 
 include { SNPEFF                                 } from '../modules/nf-core/snpeff/main'
 include { VCF2MAF                                } from '../modules/nf-core/vcf2maf/main'
 
 include { BCFTOOLS_STATS                         } from '../modules/nf-core/bcftools/stats/main' 
 include { VCFTOOLS                               } from '../modules/nf-core/vcftools/main'
+include { RTGTOOLS_VCFEVAL                       } from '../modules/nf-core/rtgtools/vcfeval/main'
 
 include { OPENCGA_QC                             } from '../modules/local/opencga/opencga_qc/main'
 
@@ -397,6 +402,9 @@ workflow ALBERTO {
 
    //}
 
+        //VARIANT CALLING CON MUTEC2
+        //GATK4_MUTECT2()
+
 
 //*****************************************************************************************************************
 
@@ -417,6 +425,11 @@ workflow ALBERTO {
 
         //ch_versions = ch_versions.mix(VCFTOOLS.out.versions)
 
+//*****************************************************************************************************************
+
+
+       //RTGTOOLS_VCFEVAL()
+
 
 //*****************************************************************************************************************
 
@@ -432,14 +445,9 @@ workflow ALBERTO {
     //} else {
     
         //ANOTACION CON VCF2MAF
+        //El vcf debe estar descomprimido - como hacerlo??
 
-        //meta (map) Groovy Map containing sample information e.g. [ id:'test', single_end:false ]
-
-        //vcf (file)  vcf to convert to MAF format. Must be uncompressed.
-
-        //vep_cache (file)  Path to VEP cache dir. Required for correct running of VEP.
-
-        //VCF2MAF(vcf)
+        //VCF2MAF(vcf,fasta,vep_cache)
 
         //}
         
