@@ -33,7 +33,12 @@ process PICARD_ADDORREPLACEREADGROUPS {
         AddOrReplaceReadGroups \\
         $args \\
         --INPUT ${bam} \\
-        --OUTPUT ${prefix}.bam
+        --OUTPUT ${prefix}.bam \\
+        --RGID 4 \\
+        --RGLB lib1 \\
+        --RGPL illumina \\
+        --RGPU unit1 \\
+        --RGSM 20
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

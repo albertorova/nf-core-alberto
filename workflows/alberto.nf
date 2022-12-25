@@ -144,26 +144,28 @@ def multiqc_report = []
 
 workflow ALBERTO {
 
-    ch_reports  = Channel.empty()
+    //Channels para reports de diferentes herramientas
 
-    ch_versions = Channel.empty()
+        ch_reports  = Channel.empty()
 
-    qc_reports  = Channel.empty()
+        ch_versions = Channel.empty()
 
-    ch_logs = Channel.empty()
+        qc_reports  = Channel.empty()
+
+        ch_logs = Channel.empty()
 
 //*****************************************************************************************************************
 
     //Preparar fasta, fai, dict
     
-    GATK4_CREATESEQUENCEDICTIONARY(fasta)
-    SAMTOOLS_FAIDX(fasta.map{ it -> [[id:it[0].baseName], it] }) 
+        GATK4_CREATESEQUENCEDICTIONARY(fasta)
+        SAMTOOLS_FAIDX(fasta.map{ it -> [[id:it[0].baseName], it] }) 
     
-    dict                             = GATK4_CREATESEQUENCEDICTIONARY.out.dict                               // path: genome.fasta.dict
-    fasta_fai                        = SAMTOOLS_FAIDX.out.fai.map{ meta, fai -> [fai] }                      // path: genome.fasta.fai
+        dict                             = GATK4_CREATESEQUENCEDICTIONARY.out.dict                               // path: genome.fasta.dict
+        fasta_fai                        = SAMTOOLS_FAIDX.out.fai.map{ meta, fai -> [fai] }                      // path: genome.fasta.fai
         
-    ch_versions = ch_versions.mix(GATK4_CREATESEQUENCEDICTIONARY.out.versions)
-    ch_versions = ch_versions.mix(SAMTOOLS_FAIDX.out.versions)
+        ch_versions = ch_versions.mix(GATK4_CREATESEQUENCEDICTIONARY.out.versions)
+        ch_versions = ch_versions.mix(SAMTOOLS_FAIDX.out.versions)
 
 //*****************************************************************************************************************
 
@@ -171,14 +173,14 @@ workflow ALBERTO {
 
     //Preparar indices para BWAMEM/BWAMEM2
 
-    //BWAMEM1_INDEX(fasta.map{ it -> [[id:it[0].baseName], it] }) // If aligner is bwa-mem
-    BWAMEM2_INDEX(fasta.map{ it -> [[id:it[0].baseName], it] }) // If aligner is bwa-mem2
+        //BWAMEM1_INDEX(fasta.map{ it -> [[id:it[0].baseName], it] }) // If aligner is bwa-mem
+        //BWAMEM2_INDEX(fasta.map{ it -> [[id:it[0].baseName], it] }) // If aligner is bwa-mem2
 
-    //bwa                              = BWAMEM1_INDEX.out.index.map{ meta, index -> [index] }.collect()       // path: bwa/*
-    bwamem2                          = BWAMEM2_INDEX.out.index.map{ meta, index -> [index] }.collect()       // path: bwamem2/*
+        //bwa                              = BWAMEM1_INDEX.out.index.map{ meta, index -> [index] }.collect()       // path: bwa/*
+        //bwamem2                          = BWAMEM2_INDEX.out.index.map{ meta, index -> [index] }.collect()       // path: bwamem2/*
 
-    //ch_versions = ch_versions.mix(BWAMEM1_INDEX.out.versions)
-    ch_versions = ch_versions.mix(BWAMEM2_INDEX.out.versions)
+        //ch_versions = ch_versions.mix(BWAMEM1_INDEX.out.versions)
+        //ch_versions = ch_versions.mix(BWAMEM2_INDEX.out.versions)
 
 //*****************************************************************************************************************
 
@@ -186,11 +188,11 @@ workflow ALBERTO {
 
     //Preparar indices para BOWTIE2
 
-    BOWTIE2_BUILD(fasta.map{ it -> [[id:it[0].baseName], it] }) // If aligner is bowtie2
+        BOWTIE2_BUILD(fasta.map{ it -> [[id:it[0].baseName], it] }) // If aligner is bowtie2
 
-    bowtie2                          = BOWTIE2_BUILD.out.index.map{ meta, index -> [index] }.collect()       // path: bwamem2/*
+        bowtie2                          = BOWTIE2_BUILD.out.index.map{ meta, index -> [index] }.collect()       // path: bwamem2/*
 
-    ch_versions = ch_versions.mix(BOWTIE2_BUILD.out.versions)
+        ch_versions = ch_versions.mix(BOWTIE2_BUILD.out.versions)
 
     //}
     
@@ -198,90 +200,77 @@ workflow ALBERTO {
 
     //Preparar KNOWN_INDELS y DBSNP
 
-    TABIX_KNOWN_INDELS( known_indels.flatten().map{ it -> [[id:it.baseName], it] } )
-    TABIX_DBSNP(dbsnp.flatten().map{ it -> [[id:it.baseName], it] })
-    TABIX_GERMLINE_RESOURCE(germline_resource.flatten().map{ it -> [[id:it.baseName], it] })
+        TABIX_KNOWN_INDELS( known_indels.flatten().map{ it -> [[id:it.baseName], it] } )
+        TABIX_DBSNP(dbsnp.flatten().map{ it -> [[id:it.baseName], it] })
+        TABIX_GERMLINE_RESOURCE(germline_resource.flatten().map{ it -> [[id:it.baseName], it] })
 
-    known_indels_tbi                 = TABIX_KNOWN_INDELS.out.tbi.map{ meta, tbi -> [tbi] }.collect()        // path: {known_indels*}.vcf.gz.tbi
-    dbsnp_tbi                        = TABIX_DBSNP.out.tbi.map{ meta, tbi -> [tbi] }.collect()               // path: dbsnb.vcf.gz.tbi
-    germline_resource_tbi            = TABIX_GERMLINE_RESOURCE.out.tbi.map{ meta, tbi -> [tbi] }.collect()   // path: germline_resource.vcf.gz.tbi
+        known_indels_tbi                 = TABIX_KNOWN_INDELS.out.tbi.map{ meta, tbi -> [tbi] }.collect()        // path: {known_indels*}.vcf.gz.tbi
+        dbsnp_tbi                        = TABIX_DBSNP.out.tbi.map{ meta, tbi -> [tbi] }.collect()               // path: dbsnb.vcf.gz.tbi
+        germline_resource_tbi            = TABIX_GERMLINE_RESOURCE.out.tbi.map{ meta, tbi -> [tbi] }.collect()   // path: germline_resource.vcf.gz.tbi
 
-    ch_versions = ch_versions.mix(TABIX_DBSNP.out.versions)
-    ch_versions = ch_versions.mix(TABIX_KNOWN_INDELS.out.versions)
-    ch_versions = ch_versions.mix(TABIX_GERMLINE_RESOURCE.out.versions)
+        ch_versions = ch_versions.mix(TABIX_DBSNP.out.versions)
+        ch_versions = ch_versions.mix(TABIX_KNOWN_INDELS.out.versions)
+        ch_versions = ch_versions.mix(TABIX_GERMLINE_RESOURCE.out.versions)
 
-    known_sites_indels     = dbsnp.concat(known_indels).collect()
-    known_sites_indels_tbi = dbsnp_tbi.concat(known_indels_tbi).collect()
+        known_sites_indels     = dbsnp.concat(known_indels).collect()
+        known_sites_indels_tbi = dbsnp_tbi.concat(known_indels_tbi).collect()
 
 
+
+//*****************************************************************************************************************
+    
+    //
+    //VALIDAR INPUT
+    //
+        INPUT_CHECK(ch_input)
+        ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
 
 //*****************************************************************************************************************
 
     //
-    // VALIDAR INPUT
+    //FASTQC
     //
-    INPUT_CHECK (
-        ch_input
-    )
-    ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
+        //FASTQC (INPUT_CHECK.out.reads)
 
-//*****************************************************************************************************************
-
-    //
-    // FASTQC
-    //
-    FASTQC (
-        INPUT_CHECK.out.reads
-    )
-
-    ch_reports  = ch_reports.mix(FASTQC.out.zip.collect{meta, logs -> logs})
-    ch_versions = ch_versions.mix(FASTQC.out.versions.first())
+        //ch_reports  = ch_reports.mix(FASTQC.out.zip.collect{meta, logs -> logs})
+        //ch_versions = ch_versions.mix(FASTQC.out.versions.first())
 
 //*****************************************************************************************************************
 
     //FASTP/Trimming
 
-    trimmed_reads  = Channel.empty()
+        trimmed_reads  = Channel.empty()
 
-            save_trimmed_fail = false
-            save_merged = false
-            FASTP(INPUT_CHECK.out.reads,
-                    [], 
-                    save_trimmed_fail,
-                    save_merged)
-    
-       trimmed_reads  = FASTP.out.reads
+        //save_trimmed_fail = false
+        //save_merged = false
+        //FASTP(INPUT_CHECK.out.reads,[],save_trimmed_fail,save_merged)
 
-            ch_reports = ch_reports.mix(
-                                        FASTP.out.json.collect{meta, json -> json},
-                                        FASTP.out.html.collect{meta, html -> html}
-                                       )
+        //trimmed_reads  = FASTP.out.reads
+
+        //ch_reports = ch_reports.mix(FASTP.out.json.collect{meta, json -> json},FASTP.out.html.collect{meta, html -> html})
 
 //*****************************************************************************************************************
 
-    //Trimmomatic ARREGLAR!!
-    //ERROR: Caused by: Process `NFCORE_ALBERTO:ALBERTO:TRIMMOMATIC (SAMPLE1_PE_T1)` terminated with an error exit status (1)
+    //Trimmomatic SOLUCIONADO PROBLEMA:
+    //AÑADIDA LINEA DE ARGUMENTOS --> ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
 
-    //trimmed_reads  = Channel.empty()
+        TRIMMOMATIC(INPUT_CHECK.out.reads)
 
-        //TRIMMOMATIC(INPUT_CHECK.out.reads)
+        trimmed_reads = trimmed_reads.mix(TRIMMOMATIC.out.trimmed_reads)
 
-        //trimmed_reads  = trimmed_reads.mix(TRIMMOMATIC.out.reads)
-
-
-        //ch_logs  = ch_logs.mix(TRIMMOMATIC.out.log.first())
-        //ch_versions = ch_versions.mix(TRIMMOMATIC.out.versions.first())
+        ch_logs = ch_logs.mix(TRIMMOMATIC.out.log.first())
+        ch_versions = ch_versions.mix(TRIMMOMATIC.out.versions.first())
 
 
 //*****************************************************************************************************************
 
     //Trimgalore 
        
-       TRIMGALORE(INPUT_CHECK.out.reads) 
+        //TRIMGALORE(INPUT_CHECK.out.reads) 
 
-       //trimmed_reads  = trimmed_reads.mix(TRIMGALORE.out.reads)
+        //trimmed_reads = trimmed_reads.mix(TRIMGALORE.out.reads)
 
-       ch_versions = ch_versions.mix(TRIMGALORE.out.versions.first())
+        //ch_versions = ch_versions.mix(TRIMGALORE.out.versions.first())
 
 
 //*****************************************************************************************************************
@@ -290,30 +279,29 @@ workflow ALBERTO {
 
     // Mapeado con BWAMEM/BWAMEM2    
 
-    sort_bam = true        
-    //BWAMEM1_MEM(trimmed_reads,   bwa.map{ it -> [[id:it[0].baseName], it] }, sort_bam) // If aligner is bwa-mem
-      BWAMEM2_MEM(trimmed_reads,   bwamem2.map{ it -> [[id:it[0].baseName], it] }, sort_bam) // If aligner is bwa-mem2
+        //sort_bam = true        
+        //BWAMEM1_MEM(trimmed_reads,   bwa.map{ it -> [[id:it[0].baseName], it] }, sort_bam) // If aligner is bwa-mem
+        //BWAMEM2_MEM(trimmed_reads,   bwamem2.map{ it -> [[id:it[0].baseName], it] }, sort_bam) // If aligner is bwa-mem2
 
-    //Solo nos quedamos con el BWAMEM2
-    //ch_bam_mapped = BWAMEM1_MEM.out.bam
-      ch_bam_mapped = BWAMEM2_MEM.out.bam
+        //Solo nos quedamos con el BWAMEM2
+        //ch_bam_mapped = BWAMEM1_MEM.out.bam
+        //ch_bam_mapped = BWAMEM2_MEM.out.bam
 
-    //ch_versions = ch_versions.mix(BWAMEM1_MEM.out.versions.first())
-      ch_versions = ch_versions.mix(BWAMEM2_MEM.out.versions.first())
+        //ch_versions = ch_versions.mix(BWAMEM1_MEM.out.versions.first())
+        //ch_versions = ch_versions.mix(BWAMEM2_MEM.out.versions.first())
 
 
     //} else {
 
-
     // Mapeado con BOWTIE2  
 
-    save_unaligned = false     
-    sort_bam = true   
-    BOWTIE2_ALIGN(trimmed_reads,   bowtie2.map{ it -> [[id:it[0].baseName], it] },save_unaligned,sort_bam) 
+        save_unaligned = false     
+        sort_bam = true   
+        BOWTIE2_ALIGN(trimmed_reads,   bowtie2.map{ it -> [[id:it[0].baseName], it] },save_unaligned,sort_bam) 
 
-    //ch_bam_mapped = BOWTIE2_ALIGN.out.bam
+        ch_bam_mapped = BOWTIE2_ALIGN.out.bam
 
-    ch_versions = ch_versions.mix(BOWTIE2_ALIGN.out.versions.first())
+        ch_versions = ch_versions.mix(BOWTIE2_ALIGN.out.versions.first())
 
     //}
 
@@ -322,59 +310,59 @@ workflow ALBERTO {
     
     //AÑADIR READ GROUPS AL BAM
     
-    //SAMBLASTER(ch_bam_mapped)
+        //SAMBLASTER(ch_bam_mapped)
 
-    //FGBIO_GROUPREADSBYUMI
+        //FGBIO_GROUPREADSBYUMI
         //group_by_umi_strategy = 'Adjacency'
         //FGBIO_GROUPREADSBYUMI(SAMBLASTER.out.bam, group_by_umi_strategy)
 
-    //PICARD_ADDORREPLACEREADGROUPS
-        //Añade grupos al bam. Tambien puede usarse para sacar indexarlo
-        //PICARD_ADDORREPLACEREADGROUPS(ch_bam_mapped)
+        //PICARD_ADDORREPLACEREADGROUPS ARREGLAR!!
+        //Añade grupos al bam. Tambien puede usarse para indexarlo
+        PICARD_ADDORREPLACEREADGROUPS(ch_bam_mapped)
 
 
 //*****************************************************************************************************************
 
     //MARKDUPLICATES ARREGLAR!!
 
-    //GATK4_MARKDUPLICATES_SPARK(ch_bam_mapped, fasta, fasta_fai, dict)
+        //GATK4_MARKDUPLICATES_SPARK(ch_bam_mapped, fasta, fasta_fai, dict)
 
-    //GATK4_ESTIMATELIBRARYCOMPLEXITY(ch_bam_mapped, fasta, fasta_fai, dict)
+        //GATK4_ESTIMATELIBRARYCOMPLEXITY(ch_bam_mapped, fasta, fasta_fai, dict)
 
-    // Reports
-    //qc_reports = qc_reports.mix(GATK4_ESTIMATELIBRARYCOMPLEXITY.out.metrics)
+        //Reports
+        //qc_reports = qc_reports.mix(GATK4_ESTIMATELIBRARYCOMPLEXITY.out.metrics)
 
     
-    //ch_versions = ch_versions.mix(GATK4_ESTIMATELIBRARYCOMPLEXITY.out.versions.first())
-    //ch_versions = ch_versions.mix(GATK4_MARKDUPLICATES_SPARK.out.versions)
+        //ch_versions = ch_versions.mix(GATK4_ESTIMATELIBRARYCOMPLEXITY.out.versions.first())
+        //ch_versions = ch_versions.mix(GATK4_MARKDUPLICATES_SPARK.out.versions)
 
 
 //******************************************************************************************************************
    
     //Indexar BAM
 
-    SAMTOOLS_INDEX(ch_bam_mapped)
+        //SAMTOOLS_INDEX(ch_bam_mapped)
 
-    ch_bam_bai = SAMTOOLS_INDEX.out.bai_solo
+        //ch_bam_bai = SAMTOOLS_INDEX.out.bai_solo
 
-    ch_versions = ch_versions.mix(SAMTOOLS_INDEX.out.versions.first())
+        //ch_versions = ch_versions.mix(SAMTOOLS_INDEX.out.versions.first())
 
 
 //*****************************************************************************************************************
 
     //OBTENER BED DEL BAM
 
-    BEDTOOLS_BAMTOBED(ch_bam_mapped)
+        //BEDTOOLS_BAMTOBED(ch_bam_mapped)
 
-    ch_bed = BEDTOOLS_BAMTOBED.out.bed
-    ch_bed_solo = BEDTOOLS_BAMTOBED.out.bed_solo
+        //ch_bed = BEDTOOLS_BAMTOBED.out.bed
+        //ch_bed_solo = BEDTOOLS_BAMTOBED.out.bed_solo
 
-
-    ch_versions = ch_versions.mix(BEDTOOLS_BAMTOBED.out.versions.first())
+        //ch_versions = ch_versions.mix(BEDTOOLS_BAMTOBED.out.versions.first())
 
 //*****************************************************************************************************************
        
-        //Recalibrado del bam
+    //GENERAR TABLAS PARA RECALIBRADO
+        
         //PRIMERO GENERAMOS LAS TABLAS ARREGLAR!!
         //ERROR: A USER ERROR has occurred: Number of read groups must be >= 1, but is 0
 
@@ -387,17 +375,10 @@ workflow ALBERTO {
 
 //*****************************************************************************************************************
 
-        //Recalibrado
+    //Recalibrado
 
-        //GATK4_APPLYBQSR(
-        //            BWAMEM2_MEM.out.bam,
-        //            ch_bam_bai,
-        //            ch_table,
-        //            intervals,
-        //            fasta,
-        //            fasta_fai,
-        //            dict)
-        //
+        //GATK4_APPLYBQSR(BWAMEM2_MEM.out.bam,ch_bam_bai,ch_table,intervals,fasta,fasta_fai,dict)
+        
         //recal_bam = GATK4_APPLYBQSR.out.bam
 
         //ch_versions = ch_versions.mix(GATK4_APPLYBQSR.out.versions)
@@ -406,31 +387,30 @@ workflow ALBERTO {
 //*****************************************************************************************************************
 
 
-   //if (params.caller == 'freebayes') {
+    //if (params.caller == 'freebayes') {
 
-    //VARIANT CALLING CON FREEBAYES
+        //VARIANT CALLING CON FREEBAYES
 
-        vcf  = Channel.empty()
+        //vcf  = Channel.empty()
 
-        FREEBAYES(ch_bam_mapped,fasta,fasta_fai)
+        //FREEBAYES(ch_bam_mapped,fasta,fasta_fai)
 
-        vcf   = vcf.mix(FREEBAYES.out.vcf)
+        //vcf   = vcf.mix(FREEBAYES.out.vcf)
 
-        ch_versions   = ch_versions.mix(FREEBAYES.out.versions)
+        //ch_versions   = ch_versions.mix(FREEBAYES.out.versions)
 
 
-   //} else {
-
+    //} else {
 
         //VARIANT CALLING CON STRELKA_GERMLINE
 
-            STRELKA_GERMLINE(ch_bam_mapped,ch_bam_bai,[],[], fasta, fasta_fai)
+        //STRELKA_GERMLINE(ch_bam_mapped,ch_bam_bai,[],[], fasta, fasta_fai)
 
-           // vcf   = vcf.mix(STRELKA_GERMLINE.out.vcf)
+        //vcf = vcf.mix(STRELKA_GERMLINE.out.vcf)
 
-            ch_versions   = ch_versions.mix(STRELKA_GERMLINE.out.versions)  
+        //ch_versions = ch_versions.mix(STRELKA_GERMLINE.out.versions)  
 
-   //}
+    //}
 
         //VARIANT CALLING CON MUTEC2
         //GATK4_MUTECT2(ch_bam_mapped,ch_bam_bai,intervals,fasta,fasta_fai,dict,germline_resource,germline_resource_tbi,[],[])
@@ -438,16 +418,16 @@ workflow ALBERTO {
 
 //*****************************************************************************************************************
 
-        //BCFTOOLS
+    //BCFTOOLS
 
-        BCFTOOLS_STATS(vcf.map{meta, vcf -> [meta, vcf, []]}, [], [], [])
+        //BCFTOOLS_STATS(vcf.map{meta, vcf -> [meta, vcf, []]}, [], [], [])
 
-        ch_versions   = ch_versions.mix(BCFTOOLS_STATS.out.versions)
+        //ch_versions = ch_versions.mix(BCFTOOLS_STATS.out.versions)
 
 
 //*****************************************************************************************************************
 
-        //VCFTOOLS ARREGLAR!!
+    //VCFTOOLS ARREGLAR!!
         //No aparece ningun archivo en results
         //El bed puede no ser adecuado
 
@@ -467,9 +447,9 @@ workflow ALBERTO {
 
         //ANOTACION CON SNPEFF
 
-        SNPEFF(vcf,snpeff_db,snpeff_cache)
+        //SNPEFF(vcf,snpeff_db,snpeff_cache)
 
-        ch_versions = ch_versions.mix(SNPEFF.out.versions)
+        //ch_versions = ch_versions.mix(SNPEFF.out.versions)
 
 
     //} else {
@@ -479,20 +459,21 @@ workflow ALBERTO {
 
         //VCF2MAF(vcf,fasta,vep_cache)
 
-        //}
+    //}
         
 
 //*****************************************************************************************************************
 
 
-        //QC Opencga
+    //QC Opencga
+
         //OPENCGA_QC(ch_bam_mapped_bowtie2,ch_bam_bai,ch_bed,dict)
 
 
 //*****************************************************************************************************************
 
+    //ANOTACION CELLBASE
 
-        //ANOTACION CELLBASE
         //OPENCGA_ANNOTATE(freebayes_vcf)
 
 

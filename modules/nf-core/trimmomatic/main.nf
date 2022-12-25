@@ -36,6 +36,7 @@ process TRIMMOMATIC {
         $reads \\
         $output \\
         $qual_trim \\
+        ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36 \\
         $args
 
     cat <<-END_VERSIONS > versions.yml
