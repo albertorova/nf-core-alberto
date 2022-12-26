@@ -119,6 +119,9 @@ include { STRELKA_GERMLINE                       } from '../modules/nf-core/stre
 include { GATK4_MUTECT2                          } from '../modules/nf-core/gatk4/mutect2/main'
 
 include { SNPEFF                                 } from '../modules/nf-core/snpeff/main'
+
+include { UNCOMPRESS                             } from '../modules/nf-core/uncompress/main'
+
 include { VCF2MAF                                } from '../modules/nf-core/vcf2maf/main'
 
 include { BCFTOOLS_STATS                         } from '../modules/nf-core/bcftools/stats/main' 
@@ -318,7 +321,7 @@ workflow ALBERTO {
 
         //PICARD_ADDORREPLACEREADGROUPS ARREGLAR!!
         //Añade grupos al bam. Tambien puede usarse para indexarlo
-        PICARD_ADDORREPLACEREADGROUPS(ch_bam_mapped)
+        //PICARD_ADDORREPLACEREADGROUPS(ch_bam_mapped)
 
 
 //*****************************************************************************************************************
@@ -341,11 +344,11 @@ workflow ALBERTO {
    
     //Indexar BAM
 
-        //SAMTOOLS_INDEX(ch_bam_mapped)
+        SAMTOOLS_INDEX(ch_bam_mapped)
 
-        //ch_bam_bai = SAMTOOLS_INDEX.out.bai_solo
+        ch_bam_bai = SAMTOOLS_INDEX.out.bai_solo
 
-        //ch_versions = ch_versions.mix(SAMTOOLS_INDEX.out.versions.first())
+        ch_versions = ch_versions.mix(SAMTOOLS_INDEX.out.versions.first())
 
 
 //*****************************************************************************************************************
@@ -455,7 +458,9 @@ workflow ALBERTO {
     //} else {
     
         //ANOTACION CON VCF2MAF
-        //El vcf debe estar descomprimido - como hacerlo??
+        //Descomprimir vcf
+
+        //UNCOMPRESS(vcf)
 
         //VCF2MAF(vcf,fasta,vep_cache)
 

@@ -52,3 +52,4 @@ process VCF2MAF {
     END_VERSIONS
     """
 }
+
