@@ -102,17 +102,21 @@ include { SAMBLASTER                             } from '../modules/nf-core/samb
 include { FGBIO_GROUPREADSBYUMI                  } from '../modules/nf-core/fgbio/groupreadsbyumi/main'
 
 include { GATK4_MARKDUPLICATES_SPARK             } from '../modules/nf-core/gatk4/markduplicatesspark/main'
+include { GATK4_MARKDUPLICATES                   } from '../modules/nf-core/gatk4/markduplicates/main'
 include { GATK4_ESTIMATELIBRARYCOMPLEXITY        } from '../modules/nf-core/gatk4/estimatelibrarycomplexity/main'
 
 include { PICARD_ADDORREPLACEREADGROUPS          } from '../modules/nf-core/picard/addorreplacereadgroups/main'
 
 include { GATK4_BASERECALIBRATOR                 } from '../modules/nf-core/gatk4/baserecalibrator/main'
+include { GATK4_BASERECALIBRATOR_SPARK           } from '../modules/nf-core/gatk4/baserecalibratorspark/main'
 
 include { GATK4_APPLYBQSR                        } from '../modules/nf-core/gatk4/applybqsr/main'
 
-include { SAMTOOLS_INDEX                         } from '../modules/nf-core/samtools/index/main'
+include { SAMTOOLS_INDEX as SAMTOOLS_BAM         } from '../modules/nf-core/samtools/index/main'
 
 include { BEDTOOLS_BAMTOBED                      } from '../modules/nf-core/bedtools/bamtobed/main'
+
+include { SAMTOOLS_INDEX as SAMTOOLS_RECAL       } from '../modules/nf-core/samtools/index/main'
 
 include { FREEBAYES                              } from '../modules/nf-core/freebayes/main'
 include { STRELKA_GERMLINE                       } from '../modules/nf-core/strelka/germline/main'
@@ -123,6 +127,8 @@ include { SNPEFF                                 } from '../modules/nf-core/snpe
 include { UNCOMPRESS                             } from '../modules/nf-core/uncompress/main'
 
 include { VCF2MAF                                } from '../modules/nf-core/vcf2maf/main'
+
+include { ENSEMBLVEP                             } from '../modules/nf-core/ensemblvep/main'
 
 include { BCFTOOLS_STATS                         } from '../modules/nf-core/bcftools/stats/main' 
 include { VCFTOOLS                               } from '../modules/nf-core/vcftools/main'
@@ -242,7 +248,7 @@ workflow ALBERTO {
 
     //FASTP/Trimming
 
-        trimmed_reads  = Channel.empty()
+        //trimmed_reads  = Channel.empty()
 
         //save_trimmed_fail = false
         //save_merged = false
@@ -257,12 +263,12 @@ workflow ALBERTO {
     //Trimmomatic SOLUCIONADO PROBLEMA:
     //AÑADIDA LINEA DE ARGUMENTOS --> ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
 
-        TRIMMOMATIC(INPUT_CHECK.out.reads)
+        //TRIMMOMATIC(INPUT_CHECK.out.reads)
 
-        trimmed_reads = trimmed_reads.mix(TRIMMOMATIC.out.trimmed_reads)
+        //trimmed_reads = trimmed_reads.mix(TRIMMOMATIC.out.trimmed_reads)
 
-        ch_logs = ch_logs.mix(TRIMMOMATIC.out.log.first())
-        ch_versions = ch_versions.mix(TRIMMOMATIC.out.versions.first())
+        //ch_logs = ch_logs.mix(TRIMMOMATIC.out.log.first())
+        //ch_versions = ch_versions.mix(TRIMMOMATIC.out.versions.first())
 
 
 //*****************************************************************************************************************
@@ -300,7 +306,7 @@ workflow ALBERTO {
 
         save_unaligned = false     
         sort_bam = true   
-        BOWTIE2_ALIGN(trimmed_reads,   bowtie2.map{ it -> [[id:it[0].baseName], it] },save_unaligned,sort_bam) 
+        BOWTIE2_ALIGN(INPUT_CHECK.out.reads,   bowtie2.map{ it -> [[id:it[0].baseName], it] },save_unaligned,sort_bam) 
 
         ch_bam_mapped = BOWTIE2_ALIGN.out.bam
 
@@ -312,80 +318,85 @@ workflow ALBERTO {
 //*****************************************************************************************************************
     
     //AÑADIR READ GROUPS AL BAM
-    
-        //SAMBLASTER(ch_bam_mapped)
 
-        //FGBIO_GROUPREADSBYUMI
-        //group_by_umi_strategy = 'Adjacency'
-        //FGBIO_GROUPREADSBYUMI(SAMBLASTER.out.bam, group_by_umi_strategy)
+        //PICARD_ADDORREPLACEREADGROUPS
 
-        //PICARD_ADDORREPLACEREADGROUPS ARREGLAR!!
-        //Añade grupos al bam. Tambien puede usarse para indexarlo
-        //PICARD_ADDORREPLACEREADGROUPS(ch_bam_mapped)
+        PICARD_ADDORREPLACEREADGROUPS(ch_bam_mapped,fasta)
 
 
 //*****************************************************************************************************************
 
-    //MARKDUPLICATES ARREGLAR!!
+    //MARKDUPLICATES
 
-        //GATK4_MARKDUPLICATES_SPARK(ch_bam_mapped, fasta, fasta_fai, dict)
+        GATK4_MARKDUPLICATES(PICARD_ADDORREPLACEREADGROUPS.out.bam, fasta, fasta_fai)
 
-        //GATK4_ESTIMATELIBRARYCOMPLEXITY(ch_bam_mapped, fasta, fasta_fai, dict)
+        GATK4_ESTIMATELIBRARYCOMPLEXITY(PICARD_ADDORREPLACEREADGROUPS.out.bam, fasta, fasta_fai, dict)
+
+        ch_bam_mark = GATK4_MARKDUPLICATES.out.bam
 
         //Reports
-        //qc_reports = qc_reports.mix(GATK4_ESTIMATELIBRARYCOMPLEXITY.out.metrics)
-
-    
-        //ch_versions = ch_versions.mix(GATK4_ESTIMATELIBRARYCOMPLEXITY.out.versions.first())
-        //ch_versions = ch_versions.mix(GATK4_MARKDUPLICATES_SPARK.out.versions)
+        qc_reports = qc_reports.mix(GATK4_ESTIMATELIBRARYCOMPLEXITY.out.metrics)
+        ch_versions = ch_versions.mix(GATK4_ESTIMATELIBRARYCOMPLEXITY.out.versions.first())
+        ch_versions = ch_versions.mix(GATK4_MARKDUPLICATES.out.versions)
 
 
 //******************************************************************************************************************
    
     //Indexar BAM
 
-        SAMTOOLS_INDEX(ch_bam_mapped)
+        SAMTOOLS_BAM(ch_bam_mark)
 
-        ch_bam_bai = SAMTOOLS_INDEX.out.bai_solo
+        ch_bam_bai = SAMTOOLS_BAM.out.bai_solo
 
-        ch_versions = ch_versions.mix(SAMTOOLS_INDEX.out.versions.first())
+        ch_bai = SAMTOOLS_BAM.out.bai
+
+        ch_versions = ch_versions.mix(SAMTOOLS_BAM.out.versions.first())
 
 
 //*****************************************************************************************************************
 
     //OBTENER BED DEL BAM
 
-        //BEDTOOLS_BAMTOBED(ch_bam_mapped)
+        BEDTOOLS_BAMTOBED(ch_bam_mark)
 
-        //ch_bed = BEDTOOLS_BAMTOBED.out.bed
-        //ch_bed_solo = BEDTOOLS_BAMTOBED.out.bed_solo
+        ch_bed = BEDTOOLS_BAMTOBED.out.bed
+        ch_bed_solo = BEDTOOLS_BAMTOBED.out.bed_solo
 
-        //ch_versions = ch_versions.mix(BEDTOOLS_BAMTOBED.out.versions.first())
+        ch_versions = ch_versions.mix(BEDTOOLS_BAMTOBED.out.versions.first())
 
 //*****************************************************************************************************************
        
     //GENERAR TABLAS PARA RECALIBRADO
         
-        //PRIMERO GENERAMOS LAS TABLAS ARREGLAR!!
-        //ERROR: A USER ERROR has occurred: Number of read groups must be >= 1, but is 0
+        //PRIMERO GENERAMOS LAS TABLAS
 
-        //GATK4_BASERECALIBRATOR(BWAMEM2_MEM.out.bam,ch_bam_bai,intervals,fasta,fasta_fai,dict,known_sites_indels,known_sites_indels_tbi)
+        GATK4_BASERECALIBRATOR(ch_bam_mark,ch_bam_bai,intervals,fasta,fasta_fai,dict,known_sites_indels,known_sites_indels_tbi)
 
-        //ch_table = GATK4_BASERECALIBRATOR.out.table
+        ch_table = GATK4_BASERECALIBRATOR.out.table
 
-        //ch_versions = ch_versions.mix(GATK4_BASERECALIBRATOR.out.versions)
+        ch_versions = ch_versions.mix(GATK4_BASERECALIBRATOR.out.versions)
 
 
 //*****************************************************************************************************************
 
-    //Recalibrado
+    //Recalibrado de los bam
 
-        //GATK4_APPLYBQSR(BWAMEM2_MEM.out.bam,ch_bam_bai,ch_table,intervals,fasta,fasta_fai,dict)
+        GATK4_APPLYBQSR(ch_bam_mark,ch_bai,ch_table,intervals,fasta,fasta_fai,dict)
         
-        //recal_bam = GATK4_APPLYBQSR.out.bam
+        recal_bam = GATK4_APPLYBQSR.out.bam
 
-        //ch_versions = ch_versions.mix(GATK4_APPLYBQSR.out.versions)
+        ch_versions = ch_versions.mix(GATK4_APPLYBQSR.out.versions)
 
+
+//*****************************************************************************************************************
+
+    //Indexar BAM RECAL
+
+        SAMTOOLS_RECAL(recal_bam)
+
+        ch_bam_bai_recal = SAMTOOLS_RECAL.out.bai_solo
+
+        ch_versions = ch_versions.mix(SAMTOOLS_RECAL.out.versions.first())
 
 //*****************************************************************************************************************
 
@@ -394,38 +405,40 @@ workflow ALBERTO {
 
         //VARIANT CALLING CON FREEBAYES
 
-        //vcf  = Channel.empty()
+        vcf = Channel.empty()
 
-        //FREEBAYES(ch_bam_mapped,fasta,fasta_fai)
+        FREEBAYES(recal_bam,fasta,fasta_fai)
 
-        //vcf   = vcf.mix(FREEBAYES.out.vcf)
+        vcf = vcf.mix(FREEBAYES.out.vcf)
 
-        //ch_versions   = ch_versions.mix(FREEBAYES.out.versions)
+        ch_versions = ch_versions.mix(FREEBAYES.out.versions)
 
 
     //} else {
 
         //VARIANT CALLING CON STRELKA_GERMLINE
 
-        //STRELKA_GERMLINE(ch_bam_mapped,ch_bam_bai,[],[], fasta, fasta_fai)
+        STRELKA_GERMLINE(recal_bam,ch_bam_bai_recal,[],[], fasta, fasta_fai)
 
         //vcf = vcf.mix(STRELKA_GERMLINE.out.vcf)
 
-        //ch_versions = ch_versions.mix(STRELKA_GERMLINE.out.versions)  
+        ch_versions = ch_versions.mix(STRELKA_GERMLINE.out.versions)  
 
     //}
 
         //VARIANT CALLING CON MUTEC2
-        //GATK4_MUTECT2(ch_bam_mapped,ch_bam_bai,intervals,fasta,fasta_fai,dict,germline_resource,germline_resource_tbi,[],[])
 
+        GATK4_MUTECT2(recal_bam,ch_bam_bai_recal,intervals,fasta,fasta_fai,dict,germline_resource,germline_resource_tbi,[],[])
+
+        ch_versions = ch_versions.mix(GATK4_MUTECT2.out.versions)
 
 //*****************************************************************************************************************
 
     //BCFTOOLS
 
-        //BCFTOOLS_STATS(vcf.map{meta, vcf -> [meta, vcf, []]}, [], [], [])
+        BCFTOOLS_STATS(vcf.map{meta, vcf -> [meta, vcf, []]}, [], [], [])
 
-        //ch_versions = ch_versions.mix(BCFTOOLS_STATS.out.versions)
+        ch_versions = ch_versions.mix(BCFTOOLS_STATS.out.versions)
 
 
 //*****************************************************************************************************************
@@ -434,37 +447,40 @@ workflow ALBERTO {
         //No aparece ningun archivo en results
         //El bed puede no ser adecuado
 
-        //VCFTOOLS(vcf,ch_bed_solo, [])
+        VCFTOOLS(vcf,ch_bed_solo, [])
 
-        //ch_versions = ch_versions.mix(VCFTOOLS.out.versions)
-
-//*****************************************************************************************************************
-
-
-       //RTGTOOLS_VCFEVAL()
-
+        ch_versions = ch_versions.mix(VCFTOOLS.out.versions)
 
 //*****************************************************************************************************************
+
 
     //if (params.anotador == 'freebayes') {
 
         //ANOTACION CON SNPEFF
 
-        //SNPEFF(vcf,snpeff_db,snpeff_cache)
+        SNPEFF(vcf,snpeff_db,snpeff_cache)
 
-        //ch_versions = ch_versions.mix(SNPEFF.out.versions)
+        ch_versions = ch_versions.mix(SNPEFF.out.versions)
 
 
     //} else {
     
-        //ANOTACION CON VCF2MAF
-        //Descomprimir vcf
+        //ANOTACION CON 
+        //PRIMERO DESCOMPRIMIMOS EL VCF
 
         //UNCOMPRESS(vcf)
 
-        //VCF2MAF(vcf,fasta,vep_cache)
+        //VCF2MAF
+
+        //VCF2MAF(UNCOMPRESS.out.uncompress_vcf,fasta,vep_cache)
 
     //}
+
+        ENSEMBLVEP(vcf,vep_cache,fasta)
+
+        ch_versions = ch_versions.mix(ENSEMBLVEP.out.versions)
+
+        qc_reports = qc_reports.mix(ENSEMBLVEP.out.report)
         
 
 //*****************************************************************************************************************

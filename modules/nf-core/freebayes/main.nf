@@ -8,7 +8,7 @@ process FREEBAYES {
         'quay.io/biocontainers/freebayes:1.3.6--hbfe0e7f_2' }"
 
     input:
-    tuple val(meta), path(input_1)
+    tuple val(meta), path(input)
     path fasta
     path fasta_fai
 
@@ -22,7 +22,7 @@ process FREEBAYES {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def input            = input_1        ? "${input_1}"        : "${input_1}"
+    //def input            = input_1        ? "${input_1}"        : "${input_1}"
 
     """
     freebayes \\

@@ -9,6 +9,7 @@ process PICARD_ADDORREPLACEREADGROUPS {
 
     input:
     tuple val(meta), path(bam)
+    path reference
 
     output:
     tuple val(meta), path("*.bam"), emit: bam
@@ -33,12 +34,13 @@ process PICARD_ADDORREPLACEREADGROUPS {
         AddOrReplaceReadGroups \\
         $args \\
         --INPUT ${bam} \\
-        --OUTPUT ${prefix}.bam \\
-        --RGID 4 \\
-        --RGLB lib1 \\
-        --RGPL illumina \\
-        --RGPU unit1 \\
-        --RGSM 20
+        --OUTPUT ${bam}.bam \\
+        --REFERENCE_SEQUENCE ${reference} \\
+        --RGPU 1 \\
+        --RGID 1 \\
+        --RGLB 1 \\
+        --RGSM bam \\
+        --RGPL "ILLUMINA"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -57,3 +59,4 @@ process PICARD_ADDORREPLACEREADGROUPS {
     END_VERSIONS
     """
 }
+

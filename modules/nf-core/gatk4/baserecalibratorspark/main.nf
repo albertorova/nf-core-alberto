@@ -1,4 +1,4 @@
-process GATK4_APPLYBQSR {
+process GATK4_BASERECALIBRATOR_SPARK {
     tag "$meta.id"
     label 'process_low'
 
@@ -6,18 +6,18 @@ process GATK4_APPLYBQSR {
     container 'broadinstitute/gatk:4.3.0.0'
 
     input:
-    tuple val(metaa), path(input)
-    tuple val(meta), path(input_index)
-    tuple val(metab), path(bqsr_table)
-    path  intervals
+    tuple val(meta), path(input)
+    path(input_index)
+    path(intervals)
     path  fasta
     path  fai
     path  dict
+    path  known_sites
+    path  known_sites_tbi
 
     output:
-    tuple val(meta), path("*.bam") , emit: bam,  optional: true
-    tuple val(meta), path("*.cram"), emit: cram, optional: true
-    path "versions.yml"            , emit: versions
+    tuple val(meta), path("*.table"), emit: table
+    path "versions.yml"             , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -26,20 +26,21 @@ process GATK4_APPLYBQSR {
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     def interval_command = intervals ? "--intervals $intervals" : ""
+    def sites_command = known_sites.collect{"--known-sites $it"}.join(' ')
 
     def avail_mem = 3
     if (!task.memory) {
-        log.info '[GATK ApplyBQSRSpark] Available memory not known - defaulting to 3GB. Specify process memory requirements to change this.'
+        log.info '[GATK BaseRecalibratorSpark] Available memory not known - defaulting to 3GB. Specify process memory requirements to change this.'
     } else {
         avail_mem = task.memory.giga
     }
     """
-    gatk --java-options "-Xmx${avail_mem}g" ApplyBQSRSpark \\
-        --input ${input} \\
-        --output ${prefix}.recal.${input.getExtension()} \\
+    gatk --java-options "-Xmx${avail_mem}g" BaseRecalibratorSpark \\
+        --input $input \\
+        --output ${prefix}.table \\
         --reference $fasta \\
-        --bqsr-recal-file $bqsr_table \\
         $interval_command \\
+        $sites_command \\
         --spark-master local[${task.cpus}] \\
         --tmp-dir . \\
         $args

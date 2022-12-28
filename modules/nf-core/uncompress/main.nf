@@ -4,16 +4,14 @@ process UNCOMPRESS {
     label 'process_single'
 
     input:
-    tuple val(meta), path(archive)
+    tuple val(meta), path(fastq_gz)
 
-   // output:
-   // tuple val(meta), path("${archive.baseName}/"), emit: unzipped_archive
+    output:
+    //path fastq_gz.baseName
+    tuple val(meta), path("*.vcf"), emit: uncompress_vcf
 
     script:
-    def a = PWD
-    def b = "/results/freebayes/"
     """
-    gunzip $a$b$archive
-
+    gunzip -c "${fastq_gz}" > "${fastq_gz.baseName}"
     """
 }

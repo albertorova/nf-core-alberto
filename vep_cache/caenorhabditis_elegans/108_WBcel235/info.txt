@@ -1,0 +1,6 @@
+species	caenorhabditis_elegans
+assembly	WBcel235
+sift	
+polyphen	
+source_genebuild	WS282
+source_assembly	WBcel235
