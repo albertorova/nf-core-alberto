@@ -97,18 +97,12 @@ include { BWAMEM2_MEM                            } from '../modules/nf-core/bwam
 
 include { BOWTIE2_ALIGN                          } from '../modules/nf-core/bowtie2/align/main'
 
-include { SAMBLASTER                             } from '../modules/nf-core/samblaster/main'
-
-include { FGBIO_GROUPREADSBYUMI                  } from '../modules/nf-core/fgbio/groupreadsbyumi/main'
-
-include { GATK4_MARKDUPLICATES_SPARK             } from '../modules/nf-core/gatk4/markduplicatesspark/main'
 include { GATK4_MARKDUPLICATES                   } from '../modules/nf-core/gatk4/markduplicates/main'
 include { GATK4_ESTIMATELIBRARYCOMPLEXITY        } from '../modules/nf-core/gatk4/estimatelibrarycomplexity/main'
 
 include { PICARD_ADDORREPLACEREADGROUPS          } from '../modules/nf-core/picard/addorreplacereadgroups/main'
 
 include { GATK4_BASERECALIBRATOR                 } from '../modules/nf-core/gatk4/baserecalibrator/main'
-include { GATK4_BASERECALIBRATOR_SPARK           } from '../modules/nf-core/gatk4/baserecalibratorspark/main'
 
 include { GATK4_APPLYBQSR                        } from '../modules/nf-core/gatk4/applybqsr/main'
 
@@ -183,13 +177,13 @@ workflow ALBERTO {
     //Preparar indices para BWAMEM/BWAMEM2
 
         //BWAMEM1_INDEX(fasta.map{ it -> [[id:it[0].baseName], it] }) // If aligner is bwa-mem
-        //BWAMEM2_INDEX(fasta.map{ it -> [[id:it[0].baseName], it] }) // If aligner is bwa-mem2
+        BWAMEM2_INDEX(fasta.map{ it -> [[id:it[0].baseName], it] }) // If aligner is bwa-mem2
 
         //bwa                              = BWAMEM1_INDEX.out.index.map{ meta, index -> [index] }.collect()       // path: bwa/*
-        //bwamem2                          = BWAMEM2_INDEX.out.index.map{ meta, index -> [index] }.collect()       // path: bwamem2/*
+        bwamem2                          = BWAMEM2_INDEX.out.index.map{ meta, index -> [index] }.collect()       // path: bwamem2/*
 
         //ch_versions = ch_versions.mix(BWAMEM1_INDEX.out.versions)
-        //ch_versions = ch_versions.mix(BWAMEM2_INDEX.out.versions)
+        ch_versions = ch_versions.mix(BWAMEM2_INDEX.out.versions)
 
 //*****************************************************************************************************************
 
@@ -239,47 +233,47 @@ workflow ALBERTO {
     //
     //FASTQC
     //
-        //FASTQC (INPUT_CHECK.out.reads)
+        FASTQC (INPUT_CHECK.out.reads)
 
-        //ch_reports  = ch_reports.mix(FASTQC.out.zip.collect{meta, logs -> logs})
-        //ch_versions = ch_versions.mix(FASTQC.out.versions.first())
+        ch_reports  = ch_reports.mix(FASTQC.out.zip.collect{meta, logs -> logs})
+        ch_versions = ch_versions.mix(FASTQC.out.versions.first())
 
 //*****************************************************************************************************************
 
     //FASTP/Trimming
 
-        //trimmed_reads  = Channel.empty()
+        trimmed_reads  = Channel.empty()
 
-        //save_trimmed_fail = false
-        //save_merged = false
-        //FASTP(INPUT_CHECK.out.reads,[],save_trimmed_fail,save_merged)
+        save_trimmed_fail = false
+        save_merged = false
+        FASTP(INPUT_CHECK.out.reads,[],save_trimmed_fail,save_merged)
 
-        //trimmed_reads  = FASTP.out.reads
+        trimmed_reads  = FASTP.out.reads
 
-        //ch_reports = ch_reports.mix(FASTP.out.json.collect{meta, json -> json},FASTP.out.html.collect{meta, html -> html})
+        ch_reports = ch_reports.mix(FASTP.out.json.collect{meta, json -> json},FASTP.out.html.collect{meta, html -> html})
 
 //*****************************************************************************************************************
 
     //Trimmomatic SOLUCIONADO PROBLEMA:
     //AÑADIDA LINEA DE ARGUMENTOS --> ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
 
-        //TRIMMOMATIC(INPUT_CHECK.out.reads)
+        TRIMMOMATIC(INPUT_CHECK.out.reads)
 
         //trimmed_reads = trimmed_reads.mix(TRIMMOMATIC.out.trimmed_reads)
 
-        //ch_logs = ch_logs.mix(TRIMMOMATIC.out.log.first())
-        //ch_versions = ch_versions.mix(TRIMMOMATIC.out.versions.first())
+        ch_logs = ch_logs.mix(TRIMMOMATIC.out.log.first())
+        ch_versions = ch_versions.mix(TRIMMOMATIC.out.versions.first())
 
 
 //*****************************************************************************************************************
 
     //Trimgalore 
        
-        //TRIMGALORE(INPUT_CHECK.out.reads) 
+        TRIMGALORE(INPUT_CHECK.out.reads) 
 
         //trimmed_reads = trimmed_reads.mix(TRIMGALORE.out.reads)
 
-        //ch_versions = ch_versions.mix(TRIMGALORE.out.versions.first())
+        ch_versions = ch_versions.mix(TRIMGALORE.out.versions.first())
 
 
 //*****************************************************************************************************************
@@ -288,16 +282,16 @@ workflow ALBERTO {
 
     // Mapeado con BWAMEM/BWAMEM2    
 
-        //sort_bam = true        
+        sort_bam = true        
         //BWAMEM1_MEM(trimmed_reads,   bwa.map{ it -> [[id:it[0].baseName], it] }, sort_bam) // If aligner is bwa-mem
-        //BWAMEM2_MEM(trimmed_reads,   bwamem2.map{ it -> [[id:it[0].baseName], it] }, sort_bam) // If aligner is bwa-mem2
+        BWAMEM2_MEM(trimmed_reads,   bwamem2.map{ it -> [[id:it[0].baseName], it] }, sort_bam) // If aligner is bwa-mem2
 
         //Solo nos quedamos con el BWAMEM2
         //ch_bam_mapped = BWAMEM1_MEM.out.bam
-        //ch_bam_mapped = BWAMEM2_MEM.out.bam
+        ch_bam_mapped = BWAMEM2_MEM.out.bam
 
         //ch_versions = ch_versions.mix(BWAMEM1_MEM.out.versions.first())
-        //ch_versions = ch_versions.mix(BWAMEM2_MEM.out.versions.first())
+        ch_versions = ch_versions.mix(BWAMEM2_MEM.out.versions.first())
 
 
     //} else {
@@ -308,7 +302,7 @@ workflow ALBERTO {
         sort_bam = true   
         BOWTIE2_ALIGN(INPUT_CHECK.out.reads,   bowtie2.map{ it -> [[id:it[0].baseName], it] },save_unaligned,sort_bam) 
 
-        ch_bam_mapped = BOWTIE2_ALIGN.out.bam
+        //ch_bam_mapped = BOWTIE2_ALIGN.out.bam
 
         ch_versions = ch_versions.mix(BOWTIE2_ALIGN.out.versions.first())
 
@@ -458,9 +452,9 @@ workflow ALBERTO {
 
         //ANOTACION CON SNPEFF
 
-        SNPEFF(vcf,snpeff_db,snpeff_cache)
+        //SNPEFF(vcf,snpeff_db,snpeff_cache)
 
-        ch_versions = ch_versions.mix(SNPEFF.out.versions)
+        //ch_versions = ch_versions.mix(SNPEFF.out.versions)
 
 
     //} else {
@@ -476,11 +470,11 @@ workflow ALBERTO {
 
     //}
 
-        ENSEMBLVEP(vcf,vep_cache,fasta)
+        //ENSEMBLVEP(vcf,vep_cache,fasta)
 
-        ch_versions = ch_versions.mix(ENSEMBLVEP.out.versions)
+        //ch_versions = ch_versions.mix(ENSEMBLVEP.out.versions)
 
-        qc_reports = qc_reports.mix(ENSEMBLVEP.out.report)
+        //qc_reports = qc_reports.mix(ENSEMBLVEP.out.report)
         
 
 //*****************************************************************************************************************
