@@ -15,7 +15,6 @@ def checkPathParamList = [ params.input,
                            params.multiqc_config, 
                            params.dbsnp,
                            params.fasta,
-                           params.intervals,
                            params.known_indels,
                            params.snpeff_cache,
                            params.vep_cache,
@@ -47,13 +46,15 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 */
 
 
-// SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
+// Comprobacion del input
 
 include { INPUT_CHECK } from '../subworkflows/local/input_check'
 
+
+//Archivos necesarios para algunos modulos
+
 dbsnp              = params.dbsnp                  ? Channel.fromPath(params.dbsnp).collect()                        : Channel.empty()
 fasta              = params.fasta                  ? Channel.fromPath(params.fasta).collect()                        : Channel.empty()
-intervals          = params.intervals              ? Channel.fromPath(params.intervals).collect()                    : Channel.empty()
 known_indels       = params.known_indels           ? Channel.fromPath(params.known_indels).collect()                 : Channel.empty()
 
 snpeff_db          = params.snpeff_db              ?: Channel.empty()
@@ -98,7 +99,6 @@ include { BWAMEM2_MEM                            } from '../modules/nf-core/bwam
 include { BOWTIE2_ALIGN                          } from '../modules/nf-core/bowtie2/align/main'
 
 include { GATK4_MARKDUPLICATES                   } from '../modules/nf-core/gatk4/markduplicates/main'
-include { GATK4_ESTIMATELIBRARYCOMPLEXITY        } from '../modules/nf-core/gatk4/estimatelibrarycomplexity/main'
 
 include { PICARD_ADDORREPLACEREADGROUPS          } from '../modules/nf-core/picard/addorreplacereadgroups/main'
 
@@ -125,8 +125,6 @@ include { VCF2MAF                                } from '../modules/nf-core/vcf2
 include { ENSEMBLVEP                             } from '../modules/nf-core/ensemblvep/main'
 
 include { BCFTOOLS_STATS                         } from '../modules/nf-core/bcftools/stats/main' 
-include { VCFTOOLS                               } from '../modules/nf-core/vcftools/main'
-include { RTGTOOLS_VCFEVAL                       } from '../modules/nf-core/rtgtools/vcfeval/main'
 
 include { OPENCGA_QC                             } from '../modules/local/opencga/opencga_qc/main'
 
@@ -201,7 +199,7 @@ workflow ALBERTO {
     
 //*****************************************************************************************************************
 
-    //Preparar KNOWN_INDELS y DBSNP
+    //Preparar otros recursos necesarios para los modulos
 
         TABIX_KNOWN_INDELS( known_indels.flatten().map{ it -> [[id:it.baseName], it] } )
         TABIX_DBSNP(dbsnp.flatten().map{ it -> [[id:it.baseName], it] })
@@ -240,7 +238,9 @@ workflow ALBERTO {
 
 //*****************************************************************************************************************
 
-    //FASTP/Trimming
+    //if (params.filtrador == 'fastp') {
+    
+    //FASTP
 
         trimmed_reads  = Channel.empty()
 
@@ -252,10 +252,13 @@ workflow ALBERTO {
 
         ch_reports = ch_reports.mix(FASTP.out.json.collect{meta, json -> json},FASTP.out.html.collect{meta, html -> html})
 
+        //}
+
 //*****************************************************************************************************************
 
-    //Trimmomatic SOLUCIONADO PROBLEMA:
-    //AÑADIDA LINEA DE ARGUMENTOS --> ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+    //if (params.filtrador == 'trimmomatic') {
+    
+    //Trimmomatic
 
         TRIMMOMATIC(INPUT_CHECK.out.reads)
 
@@ -265,7 +268,11 @@ workflow ALBERTO {
         ch_versions = ch_versions.mix(TRIMMOMATIC.out.versions.first())
 
 
+        //}
+
 //*****************************************************************************************************************
+
+    //if (params.filtrador == 'trimgalore') {
 
     //Trimgalore 
        
@@ -275,6 +282,7 @@ workflow ALBERTO {
 
         ch_versions = ch_versions.mix(TRIMGALORE.out.versions.first())
 
+        //}
 
 //*****************************************************************************************************************
 
@@ -324,13 +332,8 @@ workflow ALBERTO {
 
         GATK4_MARKDUPLICATES(PICARD_ADDORREPLACEREADGROUPS.out.bam, fasta, fasta_fai)
 
-        GATK4_ESTIMATELIBRARYCOMPLEXITY(PICARD_ADDORREPLACEREADGROUPS.out.bam, fasta, fasta_fai, dict)
-
         ch_bam_mark = GATK4_MARKDUPLICATES.out.bam
 
-        //Reports
-        qc_reports = qc_reports.mix(GATK4_ESTIMATELIBRARYCOMPLEXITY.out.metrics)
-        ch_versions = ch_versions.mix(GATK4_ESTIMATELIBRARYCOMPLEXITY.out.versions.first())
         ch_versions = ch_versions.mix(GATK4_MARKDUPLICATES.out.versions)
 
 
@@ -364,7 +367,7 @@ workflow ALBERTO {
         
         //PRIMERO GENERAMOS LAS TABLAS
 
-        GATK4_BASERECALIBRATOR(ch_bam_mark,ch_bam_bai,intervals,fasta,fasta_fai,dict,known_sites_indels,known_sites_indels_tbi)
+        GATK4_BASERECALIBRATOR(ch_bam_mark,ch_bam_bai,[],fasta,fasta_fai,dict,known_sites_indels,known_sites_indels_tbi)
 
         ch_table = GATK4_BASERECALIBRATOR.out.table
 
@@ -373,9 +376,9 @@ workflow ALBERTO {
 
 //*****************************************************************************************************************
 
-    //Recalibrado de los bam
+    //Recalibrado de los archivos de alineamiento
 
-        GATK4_APPLYBQSR(ch_bam_mark,ch_bai,ch_table,intervals,fasta,fasta_fai,dict)
+        GATK4_APPLYBQSR(ch_bam_mark,ch_bai,ch_table,[],fasta,fasta_fai,dict)
         
         recal_bam = GATK4_APPLYBQSR.out.bam
 
@@ -403,28 +406,34 @@ workflow ALBERTO {
 
         FREEBAYES(recal_bam,fasta,fasta_fai)
 
-        vcf = vcf.mix(FREEBAYES.out.vcf)
+        //vcf = vcf.mix(FREEBAYES.out.vcf)
 
         ch_versions = ch_versions.mix(FREEBAYES.out.versions)
 
 
-    //} else {
+        //}
+
+    //if (params.caller == 'strelka') {
 
         //VARIANT CALLING CON STRELKA_GERMLINE
 
         STRELKA_GERMLINE(recal_bam,ch_bam_bai_recal,[],[], fasta, fasta_fai)
 
-        //vcf = vcf.mix(STRELKA_GERMLINE.out.vcf)
+        vcf = vcf.mix(STRELKA_GERMLINE.out.vcf)
 
         ch_versions = ch_versions.mix(STRELKA_GERMLINE.out.versions)  
 
     //}
 
+    //if (params.caller == 'mutect') {
+
         //VARIANT CALLING CON MUTEC2
 
-        GATK4_MUTECT2(recal_bam,ch_bam_bai_recal,intervals,fasta,fasta_fai,dict,germline_resource,germline_resource_tbi,[],[])
+        GATK4_MUTECT2(recal_bam,ch_bam_bai_recal,[],fasta,fasta_fai,dict,germline_resource,germline_resource_tbi,[],[])
 
         ch_versions = ch_versions.mix(GATK4_MUTECT2.out.versions)
+
+    //}
 
 //*****************************************************************************************************************
 
@@ -437,59 +446,38 @@ workflow ALBERTO {
 
 //*****************************************************************************************************************
 
-    //VCFTOOLS ARREGLAR!!
-        //No aparece ningun archivo en results
-        //El bed puede no ser adecuado
-
-        VCFTOOLS(vcf,ch_bed_solo, [])
-
-        ch_versions = ch_versions.mix(VCFTOOLS.out.versions)
-
-//*****************************************************************************************************************
-
-
-    //if (params.anotador == 'freebayes') {
+    //if (params.anotador == 'snpeff') {
 
         //ANOTACION CON SNPEFF
 
-        //SNPEFF(vcf,snpeff_db,snpeff_cache)
+        SNPEFF(vcf,snpeff_db,snpeff_cache)
 
-        //ch_versions = ch_versions.mix(SNPEFF.out.versions)
+        ch_versions = ch_versions.mix(SNPEFF.out.versions)
 
 
     //} else {
-    
-        //ANOTACION CON 
-        //PRIMERO DESCOMPRIMIMOS EL VCF
 
-        //UNCOMPRESS(vcf)
+        ENSEMBLVEP(vcf,vep_cache,fasta)
 
-        //VCF2MAF
+        ch_versions = ch_versions.mix(ENSEMBLVEP.out.versions)
 
-        //VCF2MAF(UNCOMPRESS.out.uncompress_vcf,fasta,vep_cache)
+        qc_reports = qc_reports.mix(ENSEMBLVEP.out.report)
+
 
     //}
-
-        //ENSEMBLVEP(vcf,vep_cache,fasta)
-
-        //ch_versions = ch_versions.mix(ENSEMBLVEP.out.versions)
-
-        //qc_reports = qc_reports.mix(ENSEMBLVEP.out.report)
-        
+ 
 
 //*****************************************************************************************************************
+    //ANOTACION con Opencga
 
+        OPENCGA_ANNOTATE(vcf)
+
+
+//*****************************************************************************************************************
 
     //QC Opencga
 
-        //OPENCGA_QC(ch_bam_mapped_bowtie2,ch_bam_bai,ch_bed,dict)
-
-
-//*****************************************************************************************************************
-
-    //ANOTACION CELLBASE
-
-        //OPENCGA_ANNOTATE(freebayes_vcf)
+        OPENCGA_QC(recal_bam,ch_bed_solo,dict)
 
 
 //*****************************************************************************************************************
