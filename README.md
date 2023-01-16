@@ -62,11 +62,18 @@ The nf-core/alberto pipeline comes with documentation about the pipeline [usage]
 
 ## Credits
 
-nf-core/alberto was originally written by AARV.
+Este codigo corresponde con el desarrollo del Trabajo Final de Master "Planificacion e implementacion de un workflow de analsiis genetico de variantes"
+Dirigido por el Dr. Jose Luis Mosquera Mayo
+UOC Universidad Abierta de Cataluña
 
-We thank the following people for their extensive assistance in the development of this pipeline:
+El workflow se ha desarrollado con el soporte externo de T-Systems mediante la supervision de Miguel Cabo
 
-<!-- TODO nf-core: If applicable, make list of people who have also contributed -->
+© Alberto Andrés Rodríguez Vargas
+Reservados todos los derechos. Está prohibido la reproducción total o parcial 
+de esta obra por cualquier medio o procedimiento, comprendidos la impresión, 
+la reprografía, el microfilme, el tratamiento informático o cualquier otro sistema, 
+así como la distribución de ejemplares mediante alquiler y préstamo, sin la autorización
+escrita del autor o de los límites que autorice la Ley de Propiedad Intelectual.
 
 ## Contributions and Support
 
