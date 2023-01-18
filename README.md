@@ -64,21 +64,25 @@ The nf-core/alberto pipeline comes with documentation about the pipeline [usage]
 
 ## Credits
 
-Este codigo corresponde con el desarrollo del Trabajo Final de Master "Planificación e 
-implementación de un workflow de análisis genético para la detección de variantes"
+This code corresponds to the development of the Master's Final Project "Planning and 
+implementation of a genetic analysis workflow for variant detection".
 
-Dirigido por el Dr. Jose Luis Mosquera Mayo
+Directed by Dr. Jose Luis Mosquera Mayo.
 
-El workflow se ha desarrollado con el soporte externo de T-Systems mediante la supervision de Miguel Cabo
+The workflow has been developed with the external support of T-Systems under the supervision of Miguel Cabo.
 
 © Alberto Andrés Rodríguez Vargas
-Reservados todos los derechos. Está prohibido la reproducción total o parcial 
-de esta obra por cualquier medio o procedimiento, comprendidos la impresión, 
-la reprografía, el microfilme, el tratamiento informático o cualquier otro sistema, 
-así como la distribución de ejemplares mediante alquiler y préstamo, sin la autorización
-escrita del autor o de los límites que autorice la Ley de Propiedad Intelectual.
+All rights reserved. Reproduction in whole or in part of this work by
+any means or process of this work by any means or process whatsoever, 
+including printing, reprography, microfilm, computer processing or any
+other system is prohibited, as well as the distribution of copies by
+rental and lending, without the author's written permission or the
+limits author's written authorization or within the limits authorized
+by the Intellectual Property Law.
 
-UOC Universidad Abierta de Cataluña
+UOC Universitat Oberta de Catalunya
+
+Translated with www.DeepL.com/Translator (free version)
 
 ## Contributions and Support
 
