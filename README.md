@@ -69,8 +69,6 @@ implementation of a genetic analysis workflow for variant detection".
 
 Directed by Dr. Jose Luis Mosquera Mayo.
 
-The workflow has been developed with the external support of T-Systems under the supervision of Miguel Cabo.
-
 © Alberto Andrés Rodríguez Vargas
 All rights reserved. Reproduction in whole or in part of this work by
 any means or process of this work by any means or process whatsoever, 
